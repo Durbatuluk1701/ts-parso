@@ -1,13 +1,14 @@
 "use strict";
-const CharTokenizer = (str) => {
-    return str.split("");
-};
-const word_splitter = (strList, separators) => {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CharTokenizer = exports.Tokenizer = void 0;
+const token_splitter = (strList, separators) => {
     return separators.reduce((prevVal, currentSep) => {
-        return prevVal.reduce((acc, str) => acc.concat(str.split(currentSep)).filter((val) => val.trim() !== ""), []);
+        return prevVal.reduce((acc, str) => acc.concat(str.split(currentSep)), []);
     }, strList);
 };
-const WordTokenizer = (str, separators) => {
-    const splits = separators !== null && separators !== void 0 ? separators : [/\W/];
-    return word_splitter([str], splits);
+const Tokenizer = (str, separators) => {
+    return token_splitter([str], separators);
 };
+exports.Tokenizer = Tokenizer;
+const CharTokenizer = (str) => (0, exports.Tokenizer)(str, [""]);
+exports.CharTokenizer = CharTokenizer;

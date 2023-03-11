@@ -4,7 +4,7 @@
   "description": "A general-purpose parser written in Typescript",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test-tokenizer": "tsc && node ./Test-Tokenizer.js"
   },
   "repository": {
     "type": "git",
@@ -16,7 +16,7 @@
     "url": "https://github.com/Durbatuluk1701/ts-parso/issues"
   },
   "homepage": "https://github.com/Durbatuluk1701/ts-parso#readme",
-  "dependencies": {
-    "typescript": "^4.9.5"
+  "devDependencies": {
+    "@types/node": "^18.15.0"
   }
 }
