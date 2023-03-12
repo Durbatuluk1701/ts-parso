@@ -1,22 +1,84 @@
-export type Tokens = string[];
-
-const token_splitter = (
-  strList: string[],
-  separators: (string | RegExp)[]
-): string[] => {
-  return separators.reduce((prevVal, currentSep) => {
-    return prevVal.reduce<string[]>(
-      (acc, str) => acc.concat(str.split(currentSep)),
-      []
-    );
-  }, strList);
+type Token = {
+  name: string;
+  match: string;
 };
 
-export const Tokenizer = (
-  str: string,
-  separators: (string | RegExp)[]
-): Tokens => {
-  return token_splitter([str], separators);
+type Tokens = Token[];
+
+interface TokenDescription {
+  name: string;
+  description: RegExp;
+  precedence: number;
+}
+
+const token_desc_list: TokenDescription[] = [
+  {
+    name: "h3",
+    description: /###/,
+    precedence: 12,
+  },
+  {
+    name: "h2",
+    description: /##/,
+    precedence: 11,
+  },
+  {
+    name: "h1",
+    description: /#/,
+    precedence: 10,
+  },
+  {
+    name: "str",
+    description: /.+/,
+    precedence: 0,
+  },
+  {
+    name: "BR",
+    description: /\n/,
+    precedence: 10,
+  },
+];
+
+const test_str =
+  "# Testing \n### This is a little header\nand we can have baby text under it";
+
+// We presume that tds is passed in sorted!
+const Tokenize_prime = (str: string, tds: TokenDescription[]): Tokens => {
+  if (str.length === 0) {
+    // End of input
+    return [];
+  }
+  const goodMatches = tds
+    .map((desc) => {
+      return {
+        name: desc.name,
+        match: str.match(desc.description),
+      };
+    })
+    .filter((val) => val && val.match && val.match.index === 0);
+  if (!goodMatches) {
+    console.error(`We could not tokenize, error with string '${str}'`);
+    return [];
+  }
+  const optimalMatch = goodMatches[0];
+  if (optimalMatch && optimalMatch.match) {
+    const best_token: Token = {
+      name: optimalMatch.name,
+      match: optimalMatch.match[0],
+    };
+    return [
+      best_token,
+      ...Tokenize_prime(str.slice(best_token.match.length), tds),
+    ];
+  }
+  throw new Error("Error tokenizing");
 };
 
-export const CharTokenizer = (str: string): Tokens => Tokenizer(str, [""]);
+const Tokenize = (str: string, tds: TokenDescription[]) => {
+  return Tokenize_prime(
+    str,
+    tds.sort((a, b) => b.precedence - a.precedence)
+  );
+};
+
+console.log("OUTPUT: ", Tokenize(test_str, token_desc_list));
