@@ -109,15 +109,22 @@ const LL_rule = (k, ts, g, r) => {
 // Parses out with an LL(k) parser and returns updated stream
 const LL = (k, ts, g) => {
     if (ts.length === 0) {
+        console.log("End of tokens");
         return [];
     }
     const ruleNames = rule_names(g);
     const firstK_Rules = g.map((r) => r.pattern.slice(0, k));
     firstK_Rules.forEach((pattern) => {
+        console.log("k rules", pattern);
         const running_matches = [];
         for (let i = 0; i < k; i++) {
             const tokI = ts[i];
             const patternI = pattern[i];
+            console.log("pattern", patternI, "\nTokenName:", tokI.name);
+            if (!patternI) {
+                // This occurs when 'k' is longer than the pattern length
+                return running_matches;
+            }
             if (tokI.name === patternI) {
                 // Token matched
                 running_matches.push(tokI.name);
@@ -143,6 +150,7 @@ const LL = (k, ts, g) => {
         return running_matches;
     });
     // Could not match any rule
+    console.error("Could not match any rule");
     return [];
 };
 // This is a LL(1) parser,

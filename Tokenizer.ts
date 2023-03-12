@@ -74,11 +74,17 @@ const Tokenize_prime = (str: string, tds: TokenDescription[]): Tokens => {
   throw new Error("Error tokenizing");
 };
 
-const Tokenize = (str: string, tds: TokenDescription[]) => {
-  return Tokenize_prime(
+const Tokenize = (str: string, tds: TokenDescription[]): Tokens => {
+  const lastToken: Token = {
+    name: "EMPTY",
+    match: "",
+  };
+  const tokens = Tokenize_prime(
     str,
     tds.sort((a, b) => b.precedence - a.precedence)
   );
+  tokens.push(lastToken);
+  return tokens;
 };
 
 const output_tokens = Tokenize(test_str, token_desc_list);
@@ -86,11 +92,15 @@ console.log("output tokens", output_tokens);
 
 type GrammarOuput = any;
 
+type GrammarPattern = string | string[] | GrammarPattern[];
+
 type GrammarRule = {
   name: string;
-  pattern: string[]; // TODO: Should really be using an abstraction here to be more clear
+  pattern: GrammarPattern; // TODO: Should really be using an abstraction here to be more clear
   callback: (t: Tokens) => GrammarOuput;
 };
+
+const pat: GrammarPattern = [[["H1", "H2", "H3"], "Prog"], "EMPTY"];
 
 type Grammar = GrammarRule[];
 
@@ -112,6 +122,11 @@ const gram: Grammar = [
   {
     name: "Head3",
     pattern: ["H3", "STR", "BR"],
+    callback: () => {},
+  },
+  {
+    name: "Prog",
+    pattern: [[["H1", "H2", "H3"], "Prog"], "EMPTY"],
     callback: () => {},
   },
 ];
@@ -148,15 +163,22 @@ const LL_rule = (
 // Parses out with an LL(k) parser and returns updated stream
 const LL = (k: number, ts: Tokens, g: Grammar): string[] => {
   if (ts.length === 0) {
+    console.log("End of tokens");
     return [];
   }
   const ruleNames = rule_names(g);
   const firstK_Rules = g.map((r) => r.pattern.slice(0, k));
   firstK_Rules.forEach((pattern) => {
+    console.log("k rules", pattern);
     const running_matches: string[] = [];
     for (let i = 0; i < k; i++) {
       const tokI = ts[i];
       const patternI = pattern[i];
+      console.log("pattern", patternI, "\nTokenName:", tokI.name);
+      if (!patternI) {
+        // This occurs when 'k' is longer than the pattern length
+        return running_matches;
+      }
       if (tokI.name === patternI) {
         // Token matched
         running_matches.push(tokI.name);
@@ -180,6 +202,7 @@ const LL = (k: number, ts: Tokens, g: Grammar): string[] => {
     return running_matches;
   });
   // Could not match any rule
+  console.error("Could not match any rule");
   return [];
 };
 
