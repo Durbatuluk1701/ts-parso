@@ -100,12 +100,11 @@ const gram = [
     {
         name: "Prog",
         pattern: [
-            // NOTE: There is a precendence here that is REQUIRED!!!
+            ["EMPTY"],
             ["Head1", "Prog"],
             ["Head2", "Prog"],
             ["Head3", "Prog"],
             ["Text", "Prog"],
-            ["EMPTY"],
         ],
         callback: () => { },
     },
@@ -128,7 +127,6 @@ const LL_pattern = (k, ts, g, r, p, final) => {
         which will not be our fault)
     */
     const ruleNames = rule_names(g);
-    const running_matches = [];
     const running_rule = {
         rule: r,
         name: `${r.name} - Pattern: ${p}`,
@@ -141,7 +139,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
         const tokI = ts[tokenInd];
         const patternI = p[patternInd];
         if (patternI === "EMPTY") {
-            return [[], 0];
+            return [running_rule, 0];
         }
         if (tokI.name === patternI) {
             // This match at point 'i'
@@ -155,7 +153,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
             const patRule = get_rule(g, patternI);
             const [matched, matchedInd] = LL_rule(k - tokenInd, ts.slice(tokenInd), g, patRule, consumeAll);
             // Add the matches
-            running_matches.push(...matched);
+            running_rule.match.push(matched);
             // add to i the length of the match
             // TODO: Check spec?
             tokenInd += matchedInd;
@@ -171,7 +169,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
         const tokI = ts[tokenInd];
         const patternI = p[patternInd];
         if (patternI === "EMPTY") {
-            return [[], 0];
+            return [running_rule, 0];
         }
         if (tokI.name === patternI) {
             // This match at point 'i'
@@ -185,7 +183,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
             const patRule = get_rule(g, patternI);
             const [matched, matchedInd] = LL_rule(k, ts.slice(tokenInd), g, patRule, consumeAll);
             // Add the matches
-            running_matches.push(...matched);
+            running_rule.match.push(matched);
             tokenInd += matchedInd;
         }
         else {
@@ -193,8 +191,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
         }
     }
     // We have consumed all the way we need to
-    running_matches.push(running_rule);
-    return [running_matches, tokenInd];
+    return [running_rule, tokenInd];
 };
 // Similar to LL(k) below, but must satisfy rule 'r' or it throws an error
 const LL_rule = (k, ts, g, r, final) => {
@@ -220,28 +217,6 @@ const LL_rule = (k, ts, g, r, final) => {
     }
     throw new Error(`Rule did not match: ${running_errors}`);
 };
-// Parses out with an LL(k) parser and returns updated stream
-const LL = (k, ts, g) => {
-    if (ts.length === 0) {
-        return [[], 0];
-    }
-    const running_errors = [];
-    for (const rule of g) {
-        try {
-            const [ruleMatch, ind] = LL_rule(k, ts, g, rule, true);
-            // TODO: Improve from here the ind stuff
-            if (ruleMatch && ruleMatch.at(-1)) {
-                const [rest, restInd] = LL(k, ts.slice(ind), g);
-                ruleMatch.push(...rest);
-                return [ruleMatch, restInd];
-            }
-        }
-        catch (e) {
-            running_errors.push(e);
-        }
-    }
-    throw new Error(`No rules worked, parsing failed: ${running_errors}`);
-};
 // This is a LL(1) parser,
 const Parser = (tokStream, langGrammar) => { };
 debugger;
@@ -256,5 +231,5 @@ const [ll_out, ind] = LL_rule(4, output_tokens, gram, {
     ],
     callback: () => { },
 }, true);
-ll_out.forEach(console.log);
+console.log(JSON.stringify(ll_out));
 //# sourceMappingURL=Tokenizer.js.map
