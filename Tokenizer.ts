@@ -92,15 +92,13 @@ console.log("output tokens", output_tokens);
 
 type GrammarOuput = any;
 
-type GrammarPattern = string | string[] | GrammarPattern[];
+type GrammarPattern = string[];
 
 type GrammarRule = {
   name: string;
-  pattern: GrammarPattern; // TODO: Should really be using an abstraction here to be more clear
+  pattern: GrammarPattern[]; // TODO: Should really be using an abstraction here to be more clear
   callback: (t: Tokens) => GrammarOuput;
 };
-
-const pat: GrammarPattern = [[["H1", "H2", "H3"], "Prog"], "EMPTY"];
 
 type Grammar = GrammarRule[];
 
@@ -108,28 +106,71 @@ const rule_names = (g: Grammar): string[] => {
   return g.map((rule) => rule.name);
 };
 
+const get_rule = (g: Grammar, r: string): GrammarRule => {
+  // FORCING HERE
+  return g.find((val) => val.name === r) as GrammarRule;
+};
+
 const gram: Grammar = [
   {
     name: "Head1",
-    pattern: ["H1", "STR", "BR"],
+    pattern: [["H1", "STR", "BR"]],
     callback: () => {},
   },
   {
     name: "Head2",
-    pattern: ["H2", "STR", "BR"],
+    pattern: [["H2", "STR", "BR"]],
     callback: () => {},
   },
   {
     name: "Head3",
-    pattern: ["H3", "STR", "BR"],
+    pattern: [["H3", "STR", "BR"]],
     callback: () => {},
   },
   {
     name: "Prog",
-    pattern: [[["H1", "H2", "H3"], "Prog"], "EMPTY"],
+    pattern: [
+      ["EMPTY"],
+      ["Head1", "Prog"],
+      ["Head2", "Prog"],
+      ["Head3", "Prog"],
+      ["STR"],
+    ],
     callback: () => {},
   },
 ];
+
+const LL_pattern = (
+  k: number,
+  ts: Tokens,
+  g: Grammar,
+  p: GrammarPattern
+): string[] => {
+  const ruleNames = rule_names(g);
+  const running_matches: string[] = [];
+  for (let i = 0; i < k; i++) {
+    const tokI = ts[i];
+    const patternI = p[i];
+    if (!patternI) {
+      // We reached the end of the pattern, so return and continue
+      return running_matches;
+    }
+    if (tokI.name === patternI) {
+      // This match at point 'i'
+      running_matches.push(tokI.name);
+    } else if (patternI in ruleNames) {
+      // pattern[i] is a separate rule, recurse down to match
+      const matched = LL_rule(k - i, ts.slice(i), g, get_rule(g, patternI));
+      // Add the matches
+      running_matches.push(...matched);
+      // add to i the length of the match
+      i += matched.length;
+    } else {
+      throw new Error("No matching pattern in LL_pattern");
+    }
+  }
+  return running_matches;
+};
 
 // Similar to LL(k) below, but must satisfy rule 'r' or it throws an error
 const LL_rule = (
@@ -138,72 +179,35 @@ const LL_rule = (
   g: Grammar,
   r: GrammarRule
 ): string[] => {
-  const ruleNames = rule_names(g);
-  const runningMatches = [];
-  for (let i = 0; i < k; i++) {
-    const tokI = ts[i];
-    const patternI = r.pattern[i];
-    if (tokI.name === patternI) {
-      // Token matched
-      runningMatches.push(tokI.name);
-    } else if (patternI in ruleNames) {
-      // We need to recurse into it as it is a Grammar Rule
-      const recCall = LL(k, ts.slice(i), g); // We slice to get all past where we currently are
-      runningMatches.push(...recCall.flat());
-    } else {
-      // Error, this is neither a Token or a Grammar Rule
-      throw new Error(
-        `Error, '${patternI}' is neither a Token or a Grammer Rule`
-      );
+  for (const pattern of r.pattern) {
+    try {
+      const patternTry = LL_pattern(k, ts, g, pattern);
+      return patternTry;
+    } catch (e) {
+      console.warn(e);
     }
   }
-  return runningMatches;
+  throw new Error("No RULE could match in LL_rule");
 };
 
 // Parses out with an LL(k) parser and returns updated stream
 const LL = (k: number, ts: Tokens, g: Grammar): string[] => {
   if (ts.length === 0) {
-    console.log("End of tokens");
     return [];
   }
-  const ruleNames = rule_names(g);
-  const firstK_Rules = g.map((r) => r.pattern.slice(0, k));
-  firstK_Rules.forEach((pattern) => {
-    console.log("k rules", pattern);
-    const running_matches: string[] = [];
-    for (let i = 0; i < k; i++) {
-      const tokI = ts[i];
-      const patternI = pattern[i];
-      console.log("pattern", patternI, "\nTokenName:", tokI.name);
-      if (!patternI) {
-        // This occurs when 'k' is longer than the pattern length
-        return running_matches;
-      }
-      if (tokI.name === patternI) {
-        // Token matched
-        running_matches.push(tokI.name);
-      } else if (patternI in ruleNames) {
-        // We need to recurse into it as it is a Grammar Rule
-        const rule = g.find((val) => val.name === patternI);
-        if (rule) {
-          // This is guaranteed!
-          const recCall = LL_rule(k, ts.slice(i), g, rule); // We slice to get all past where we currently are
-          running_matches.push(...recCall.flat());
-        }
-      } else {
-        // Error, this is neither a Token or a Grammar Rule
-        // throw new Error(
-        //   `Error, '${patternI}' is neither a Token or a Grammer Rule`
-        // );
-        break;
-      }
+  debugger;
+  console.log(ts);
+  for (const rule of g) {
+    try {
+      const ruleMatch = LL_rule(k, ts, g, rule);
+      const rest = LL(k, ts.slice(ruleMatch.length), g);
+      ruleMatch.push(...rest);
+      return ruleMatch;
+    } catch (e) {
+      console.warn(e);
     }
-    // If we get through the whole loop, then we are good to return
-    return running_matches;
-  });
-  // Could not match any rule
-  console.error("Could not match any rule");
-  return [];
+  }
+  throw new Error("No rule worked");
 };
 
 // This is a LL(1) parser,
