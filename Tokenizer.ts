@@ -189,16 +189,11 @@ const LL_pattern = (
   // Checking the first "k" tokens
   let patternInd = 0;
   let tokenInd = 0;
-  for (; tokenInd < k; patternInd++) {
+  for (; tokenInd < k && patternInd < p.length; patternInd++) {
     const tokI = ts[tokenInd];
     const patternI = p[patternInd];
     if (patternI === "EMPTY") {
       return [[], 0];
-    }
-    if (!patternI) {
-      // We reached the end of the pattern, so return and continue
-      running_matches.push(running_rule);
-      return [running_matches, tokenInd];
     }
     if (tokI.name === patternI) {
       // This match at point 'i'
@@ -209,11 +204,13 @@ const LL_pattern = (
 
       // If our pattern is the last in the list, it should consume all
       const consumeAll = final && patternInd === p.length - 1;
+      const patRule = get_rule(g, patternI);
+
       const [matched, matchedInd] = LL_rule(
         k - tokenInd,
         ts.slice(tokenInd),
         g,
-        get_rule(g, patternI),
+        patRule,
         consumeAll
       );
       // Add the matches
@@ -236,11 +233,6 @@ const LL_pattern = (
     if (patternI === "EMPTY") {
       return [[], 0];
     }
-    if (!patternI) {
-      // We reached the end of the pattern, so return and continue
-      running_matches.push(running_rule);
-      return [running_matches, patternInd];
-    }
     if (tokI.name === patternI) {
       // This match at point 'i'
       running_rule.match.push(tokI);
@@ -249,12 +241,13 @@ const LL_pattern = (
       // pattern[i] is a separate rule, recurse down to match
       // If our pattern is the last in the list, it should consume all
       const consumeAll = final && patternInd === p.length - 1;
+      const patRule = get_rule(g, patternI);
 
       const [matched, matchedInd] = LL_rule(
-        k - tokenInd,
+        k,
         ts.slice(tokenInd),
         g,
-        get_rule(g, patternI),
+        patRule,
         consumeAll
       );
       // Add the matches
