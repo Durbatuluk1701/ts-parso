@@ -26,7 +26,7 @@ const token_desc_list = [
         precedence: 10,
     },
 ];
-const test_str = "# Testing \n### This is a little header\nand we can have baby text under it";
+const test_str = "# Testing \n### This is a little header\nand we can have baby text under it\nmore text can be adding, how it will be parsed\nI am not quite sure";
 // We presume that tds is passed in sorted!
 const Tokenize_prime = (str, tds) => {
     if (str.length === 0) {
@@ -59,12 +59,12 @@ const Tokenize_prime = (str, tds) => {
     throw new Error("Error tokenizing");
 };
 const Tokenize = (str, tds) => {
-    const lastToken = {
-        name: "EMPTY",
-        match: "",
-    };
+    // const lastToken: Token = {
+    //   name: "EMPTY",
+    //   match: "",
+    // };
     const tokens = Tokenize_prime(str, tds.sort((a, b) => b.precedence - a.precedence));
-    tokens.push(lastToken);
+    // tokens.push(lastToken);
     return tokens;
 };
 const output_tokens = Tokenize(test_str, token_desc_list);
@@ -93,80 +93,176 @@ const gram = [
         callback: () => { },
     },
     {
+        name: "Text",
+        pattern: [["STR", "Text"], ["BR", "Text"], ["EMPTY"]],
+        callback: () => { },
+    },
+    {
         name: "Prog",
         pattern: [
-            ["EMPTY"],
+            // NOTE: There is a precendence here that is REQUIRED!!!
             ["Head1", "Prog"],
             ["Head2", "Prog"],
             ["Head3", "Prog"],
-            ["STR"],
+            ["Text", "Prog"],
+            ["EMPTY"],
         ],
         callback: () => { },
     },
 ];
-const LL_pattern = (k, ts, g, p) => {
+const shift_n = (arr, n) => {
+    for (let i = 0; i < n; i++) {
+        arr.shift();
+    }
+};
+const LL_pattern = (k, ts, g, r, p, final) => {
+    /** We are attempting to force match pattern "p" with tokens "ts"
+        We have to match "k" tokens, and then if they all match,
+        consume the rest of the pattern.
+        
+        If we finish our match before "k" tokens,
+        then we can fully consume that as the pattern is applicable
+  
+        If we have matched as we reach "k" tokens,
+        then continue going. (If we fail later, the grammar is not LL(k)
+        which will not be our fault)
+    */
     const ruleNames = rule_names(g);
     const running_matches = [];
-    for (let i = 0; i < k; i++) {
-        const tokI = ts[i];
-        const patternI = p[i];
+    const running_rule = {
+        rule: r,
+        name: `${r.name} - Pattern: ${p}`,
+        match: [],
+    };
+    // Checking the first "k" tokens
+    let patternInd = 0;
+    let tokenInd = 0;
+    for (; tokenInd < k; patternInd++) {
+        const tokI = ts[tokenInd];
+        const patternI = p[patternInd];
+        if (patternI === "EMPTY") {
+            return [[], 0];
+        }
         if (!patternI) {
             // We reached the end of the pattern, so return and continue
-            return running_matches;
+            running_matches.push(running_rule);
+            return [running_matches, tokenInd];
         }
         if (tokI.name === patternI) {
             // This match at point 'i'
-            running_matches.push(tokI.name);
+            running_rule.match.push(tokI);
+            tokenInd++;
         }
-        else if (patternI in ruleNames) {
-            // pattern[i] is a separate rule, recurse down to match
-            const matched = LL_rule(k - i, ts.slice(i), g, get_rule(g, patternI));
+        else if (ruleNames.includes(patternI)) {
+            // pattern[i] is a separate rule, recurse down to match - FIRST CASE
+            // If our pattern is the last in the list, it should consume all
+            const consumeAll = final && patternInd === p.length - 1;
+            const [matched, matchedInd] = LL_rule(k - tokenInd, ts.slice(tokenInd), g, get_rule(g, patternI), consumeAll);
             // Add the matches
             running_matches.push(...matched);
             // add to i the length of the match
-            i += matched.length;
+            // TODO: Check spec?
+            tokenInd += matchedInd;
         }
         else {
             throw new Error("No matching pattern in LL_pattern");
         }
     }
-    return running_matches;
-};
-// Similar to LL(k) below, but must satisfy rule 'r' or it throws an error
-const LL_rule = (k, ts, g, r) => {
-    for (const pattern of r.pattern) {
-        try {
-            const patternTry = LL_pattern(k, ts, g, pattern);
-            return patternTry;
+    // After this point, we have satisfied our
+    // "k" token lookahead, parse the rest of the pattern and continue
+    // Checking the first "k" tokens
+    for (; patternInd < p.length && tokenInd < ts.length; patternInd++) {
+        const tokI = ts[tokenInd];
+        const patternI = p[patternInd];
+        if (patternI === "EMPTY") {
+            return [[], 0];
         }
-        catch (e) {
-            console.warn(e);
+        if (!patternI) {
+            // We reached the end of the pattern, so return and continue
+            running_matches.push(running_rule);
+            return [running_matches, patternInd];
+        }
+        if (tokI.name === patternI) {
+            // This match at point 'i'
+            running_rule.match.push(tokI);
+            tokenInd++;
+        }
+        else if (ruleNames.includes(patternI)) {
+            // pattern[i] is a separate rule, recurse down to match
+            // If our pattern is the last in the list, it should consume all
+            const consumeAll = final && patternInd === p.length - 1;
+            const [matched, matchedInd] = LL_rule(k - tokenInd, ts.slice(tokenInd), g, get_rule(g, patternI), consumeAll);
+            // Add the matches
+            running_matches.push(...matched);
+            tokenInd += matchedInd;
+        }
+        else {
+            throw new Error("No matching pattern in LL_pattern");
         }
     }
-    throw new Error("No RULE could match in LL_rule");
+    // We have consumed all the way we need to
+    running_matches.push(running_rule);
+    return [running_matches, tokenInd];
+};
+// Similar to LL(k) below, but must satisfy rule 'r' or it throws an error
+const LL_rule = (k, ts, g, r, final) => {
+    const running_errors = [];
+    // While we still have tokens to consume, try the rules patterns
+    for (const pattern of r.pattern) {
+        // For each possible pattern
+        try {
+            // Try to apply that pattern,
+            const [patternTry, ind] = LL_pattern(k, ts, g, r, pattern, final);
+            // If we have validly reached this point,
+            // the entire pattern has been consumed!
+            if (final && ind < ts.length) {
+                // If this is supposed to consume all, but it didnt
+                continue;
+                // This cannot be the pattern, so continue
+            }
+            return [patternTry, ind];
+        }
+        catch (e) {
+            running_errors.push(e);
+        }
+    }
+    throw new Error(`Rule did not match: ${running_errors}`);
 };
 // Parses out with an LL(k) parser and returns updated stream
 const LL = (k, ts, g) => {
     if (ts.length === 0) {
-        return [];
+        return [[], 0];
     }
-    debugger;
-    console.log(ts);
+    const running_errors = [];
     for (const rule of g) {
         try {
-            const ruleMatch = LL_rule(k, ts, g, rule);
-            const rest = LL(k, ts.slice(ruleMatch.length), g);
-            ruleMatch.push(...rest);
-            return ruleMatch;
+            const [ruleMatch, ind] = LL_rule(k, ts, g, rule, true);
+            // TODO: Improve from here the ind stuff
+            if (ruleMatch && ruleMatch.at(-1)) {
+                const [rest, restInd] = LL(k, ts.slice(ind), g);
+                ruleMatch.push(...rest);
+                return [ruleMatch, restInd];
+            }
         }
         catch (e) {
-            console.warn(e);
+            running_errors.push(e);
         }
     }
-    throw new Error("No rule worked");
+    throw new Error(`No rules worked, parsing failed: ${running_errors}`);
 };
 // This is a LL(1) parser,
 const Parser = (tokStream, langGrammar) => { };
-const ll_out = LL(4, output_tokens, gram);
-console.log(ll_out);
+debugger;
+const [ll_out, ind] = LL_rule(4, output_tokens, gram, {
+    name: "Prog",
+    pattern: [
+        ["EMPTY"],
+        ["Head1", "Prog"],
+        ["Head2", "Prog"],
+        ["Head3", "Prog"],
+        ["Text", "Prog"],
+    ],
+    callback: () => { },
+}, true);
+ll_out.forEach(console.log);
 //# sourceMappingURL=Tokenizer.js.map
