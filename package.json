@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "description": "A general-purpose parser written in Typescript",
   "main": "index.js",
-  "scripts": {
-    "test-tokenizer": "tsc && node ./Test-Tokenizer.js"
-  },
+  "types": "global.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Durbatuluk1701/ts-parso.git"
   },
   "author": "Durbatuluk1701",
+  "keywords": [
+    "parser",
+    "typescript"
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/Durbatuluk1701/ts-parso/issues"
@@ -18,5 +20,8 @@
   "homepage": "https://github.com/Durbatuluk1701/ts-parso#readme",
   "devDependencies": {
     "@types/node": "^18.15.0"
+  },
+  "dependencies": {
+    "typescript": "^5.0.2"
   }
 }
