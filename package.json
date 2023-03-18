@@ -11,7 +11,7 @@
   "scripts": {
     "test": "tsc"
   },
-  "author": "Durbatuluk1701",
+  "author": "durbatuluk1701",
   "keywords": [
     "parser",
     "typescript"
