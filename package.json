@@ -1,12 +1,15 @@
 {
   "name": "ts-parso",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A general-purpose parser written in Typescript",
   "main": "index.js",
   "types": "global.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Durbatuluk1701/ts-parso.git"
+  },
+  "scripts": {
+    "test": "tsc"
   },
   "author": "Durbatuluk1701",
   "keywords": [
