@@ -1,4 +1,10 @@
-// We presume that tds is passed in sorted!
+/**
+ * Very similar to Tokenize, but we presumed that the
+ * token description list "tds" is sorted based on
+ * token precedence
+ * @param str the string to tokenize
+ * @param tds the list of token descriptions
+ */
 const Tokenize_prime = (str: string, tds: TokenDescription[]): Tokens => {
   if (str.length === 0) {
     // End of input
@@ -11,10 +17,9 @@ const Tokenize_prime = (str: string, tds: TokenDescription[]): Tokens => {
         match: str.match(desc.description),
       };
     })
-    .filter((val) => val && val.match && val.match.index === 0);
+    .filter((val) => val.match && val.match.index === 0);
   if (!goodMatches) {
-    console.error(`We could not tokenize, error with string '${str}'`);
-    return [];
+    throw new Error(`We could not tokenize, error with string '${str}'`);
   }
   const optimalMatch = goodMatches[0];
   if (optimalMatch && optimalMatch.match) {
@@ -30,15 +35,16 @@ const Tokenize_prime = (str: string, tds: TokenDescription[]): Tokens => {
   throw new Error("Error tokenizing");
 };
 
+/**
+ * Tokenizes a string "str" using tokens as described
+ * in the list of token descriptions "tds"
+ * @param str the string to tokenize
+ * @param tds the list of token descriptions
+ */
 export const Tokenize = (str: string, tds: TokenDescription[]): Tokens => {
-  // const lastToken: Token = {
-  //   name: "EMPTY",
-  //   match: "",
-  // };
   const tokens = Tokenize_prime(
     str,
     tds.sort((a, b) => b.precedence - a.precedence)
   );
-  // tokens.push(lastToken);
   return tokens;
 };
