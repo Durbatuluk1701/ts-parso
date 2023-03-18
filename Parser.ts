@@ -1,12 +1,35 @@
+/**
+ * Gets the name of all rules in a grammar
+ * @param g the grammar to get the rules names from
+ */
 const rule_names = (g: Grammar): string[] => {
   return g.map((rule) => rule.name);
 };
 
+/**
+ * Gets a specific grammar rule for from a grammar
+ * where the rule name is provided
+ * @param g the grammar to get the rule from
+ * @param r the name of the rule to find
+ * @throws If the rule name r is not in grammar g
+ */
 const get_rule = (g: Grammar, r: string): GrammarRule => {
-  // FORCING HERE
-  return g.find((val) => val.name === r) as GrammarRule;
+  const gr = g.find((val) => val.name === r);
+  if (gr) {
+    return gr;
+  }
+  throw new Error(`Rule '${r}' does not exist in grammar ${g}`);
 };
 
+/**
+ * A LL(k) parser for a specific grammar rules pattern
+ * @param k the number of lookahead tokens for this parser
+ * @param ts the stream of tokens to parse
+ * @param g the grammar to use for parsing
+ * @param r the top-level grammar rule to attempt to parse
+ * @param p the specific pattern to attempt to parse
+ * @param final whether or not this parser should consume all remaining tokens
+ */
 const LL_pattern = (
   k: number,
   ts: Tokens,
@@ -111,7 +134,14 @@ const LL_pattern = (
   return [running_rule, tokenInd];
 };
 
-// Similar to LL(k) below, but must satisfy rule 'r' or it throws an error
+/**
+ * A LL(k) parser for a specific grammar rule
+ * @param k the number of lookahead tokens for this parser
+ * @param ts the stream of tokens to parse
+ * @param g the grammar to use for parsing
+ * @param r the top-level grammar rule to attempt to parse
+ * @param final whether or not this parser should consume all remaining tokens
+ */
 const LL_rule = (
   k: number,
   ts: Tokens,
@@ -142,11 +172,21 @@ const LL_rule = (
   throw new Error(`Rule did not match: ${running_errors}`);
 };
 
+/**
+ * Parses the token stream with an LL(k) parser
+ * using the provided Grammer and a top-level grammar rule
+ * that the token stream must conform to.
+ * @param k the number of the LL(k) parser
+ * @param tokStream the stream of tokens to parse
+ * @param langGrammar the grammar to use for parsing
+ * @param topLevelRule the top-level rule that the token stream must conform to
+ */
 export const Parser = (
   k: number,
   tokStream: Tokens,
   langGrammar: Grammar,
   topLevelRule: GrammarRule
-): GrammarOuput => {
-  return LL_rule(k, tokStream, langGrammar, topLevelRule, true);
+): RuleMatch => {
+  const rm = LL_rule(k, tokStream, langGrammar, topLevelRule, true)[0];
+  return rm;
 };
