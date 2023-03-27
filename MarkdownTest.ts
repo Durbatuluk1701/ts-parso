@@ -3,23 +3,18 @@ import { Parser } from "./Parser";
 
 const token_desc_list: TokenDescription[] = [
   {
-    name: "H3",
-    description: /###/,
+    name: "HASH",
+    description: /#/,
     precedence: 12,
   },
   {
-    name: "H2",
-    description: /##/,
-    precedence: 11,
-  },
-  {
-    name: "H1",
-    description: /#/,
-    precedence: 10,
+    name: "STAR",
+    description: /\*/,
+    precedence: 13,
   },
   {
     name: "STR",
-    description: /.+/,
+    description: /[^*#\n]+/,
     precedence: 0,
   },
   {
@@ -30,30 +25,46 @@ const token_desc_list: TokenDescription[] = [
 ];
 
 const test_str =
-  "# Testing \n### This is a little header\nand we can have baby text under it\nmore text can be adding, how it will be parsed\nI am not quite sure";
-
+  "# Testing \n### This is a little header\nand we can **have baby** text under it\nmore *text* can be adding, how it will be parsed\nI am not quite sure";
 const output_tokens = Tokenize(test_str, token_desc_list);
+debugger;
 console.log("output tokens", output_tokens);
 
 const gram: Grammar = [
   {
     name: "Head1",
-    pattern: [["H1", "STR", "BR"]],
+    pattern: [["HASH", "STR", "BR"]],
     callback: () => {},
   },
   {
     name: "Head2",
-    pattern: [["H2", "STR", "BR"]],
+    pattern: [["HASH", "HASH", "STR", "BR"]],
     callback: () => {},
   },
   {
     name: "Head3",
-    pattern: [["H3", "STR", "BR"]],
+    pattern: [["HASH", "HASH", "HASH", "STR", "BR"]],
+    callback: () => {},
+  },
+  {
+    name: "Bold",
+    pattern: [["STAR", "STAR", "STR", "STAR", "STAR"]],
+    callback: () => {},
+  },
+  {
+    name: "Italic",
+    pattern: [["STAR", "STR", "STAR"]],
     callback: () => {},
   },
   {
     name: "Text",
-    pattern: [["STR", "Text"], ["BR", "Text"], ["EMPTY"]],
+    pattern: [
+      ["STR", "Text"],
+      ["BR", "Text"],
+      ["Italic", "Text"],
+      ["Bold", "Text"],
+      ["EMPTY"],
+    ],
     callback: () => {},
   },
   {
