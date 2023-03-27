@@ -1,6 +1,6 @@
 {
   "name": "ts-parso",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A general-purpose parser written in Typescript",
   "main": "index.js",
   "types": "global.d.ts",
