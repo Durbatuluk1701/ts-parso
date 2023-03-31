@@ -13,8 +13,58 @@ const token_desc_list: TokenDescription[] = [
     precedence: 13,
   },
   {
+    name: "UNDER",
+    description: /_/,
+    precedence: 13,
+  },
+  {
+    name: "GT",
+    description: />/,
+    precedence: 13,
+  },
+  {
+    name: "TAB",
+    description: /\t/,
+    precedence: 10,
+  },
+  {
+    name: "BACKTICK",
+    description: /`/,
+    precedence: 13,
+  },
+  {
+    name: "NUM_DOT",
+    description: /\d+./,
+    precedence: 13,
+  },
+  {
+    name: "DASH",
+    description: /-/,
+    precedence: 13,
+  },
+  {
+    name: "LBRACKET",
+    description: /\[/,
+    precedence: 13,
+  },
+  {
+    name: "RBRACKET",
+    description: /\]/,
+    precedence: 13,
+  },
+  {
+    name: "LPAREN",
+    description: /\(/,
+    precedence: 13,
+  },
+  {
+    name: "RPAREN",
+    description: /\)/,
+    precedence: 13,
+  },
+  {
     name: "STR",
-    description: /[^*#\n]+/,
+    description: /[^*_`\n\[\]\(\)]+/,
     precedence: 0,
   },
   {
@@ -25,12 +75,17 @@ const token_desc_list: TokenDescription[] = [
 ];
 
 const test_str =
-  "# Testing \n### This is a little header\nand we can **have baby** text under it\nmore *text* can be adding, how it will be parsed\nI am not quite sure";
+  "# Testing \n### This is a little header\nand we can **have baby** text under it\nmore *text* can be adding, how it will be parsed\nI am not quite sure.\n\nLet us see _how_ this works, __this would be bold I think__.\n Now we see that # hashes midway should be preserved.\n> Can we do blockquotes?\n>> How about nested ones\n1. This is some stuff\n2. More stuff\n3. Again another list item\n- Now lets try for an unordered list\n- Can we do it?\n\t- Indented list?!\n\t- Im not sure.\nNow, lets try code inside here `hello my code stuff`\n---\nA horizontal rule might be nice\nHere is a link [Duck Duck Go](https://duckduckgo.com).\n";
 const output_tokens = Tokenize(test_str, token_desc_list);
 debugger;
 console.log("output tokens", output_tokens);
 
 const gram: Grammar = [
+  {
+    name: "HorizontalRule",
+    pattern: [["DASH", "DASH", "DASH"]],
+    callback: () => {},
+  },
   {
     name: "Head1",
     pattern: [["HASH", "STR", "BR"]],
@@ -47,13 +102,54 @@ const gram: Grammar = [
     callback: () => {},
   },
   {
+    name: "Indent",
+    pattern: [["TAB"]],
+    callback: () => {},
+  },
+  {
+    name: "BlockQuote",
+    pattern: [["GT", "Prog"]],
+    callback: () => {},
+  },
+  {
+    name: "OrderedListElem",
+    pattern: [["NUM_DOT", "STR", "BR"]],
+    callback: () => {},
+  },
+  {
+    name: "UnorderedListElem",
+    pattern: [["DASH", "STR", "BR"]],
+    callback: () => {},
+  },
+  {
+    name: "BlockQuote",
+    pattern: [["GT", "Prog"]],
+    callback: () => {},
+  },
+  {
     name: "Bold",
-    pattern: [["STAR", "STAR", "STR", "STAR", "STAR"]],
+    pattern: [
+      ["STAR", "STAR", "STR", "STAR", "STAR"],
+      ["UNDER", "UNDER", "STR", "UNDER", "UNDER"],
+    ],
+    callback: () => {},
+  },
+  {
+    name: "Code",
+    pattern: [["BACKTICK", "STR", "BACKTICK"]],
+    callback: () => {},
+  },
+  {
+    name: "Link",
+    pattern: [["LBRACKET", "STR", "RBRACKET", "LPAREN", "STR", "RPAREN"]],
     callback: () => {},
   },
   {
     name: "Italic",
-    pattern: [["STAR", "STR", "STAR"]],
+    pattern: [
+      ["STAR", "STR", "STAR"],
+      ["UNDER", "STR", "UNDER"],
+    ],
     callback: () => {},
   },
   {
@@ -63,6 +159,8 @@ const gram: Grammar = [
       ["BR", "Text"],
       ["Italic", "Text"],
       ["Bold", "Text"],
+      ["Code", "Text"],
+      ["Link", "Text"],
       ["EMPTY"],
     ],
     callback: () => {},
@@ -71,9 +169,14 @@ const gram: Grammar = [
     name: "Prog",
     pattern: [
       ["EMPTY"],
+      ["HorizontalRule", "Prog"],
       ["Head1", "Prog"],
       ["Head2", "Prog"],
       ["Head3", "Prog"],
+      ["Indent", "Prog"],
+      ["BlockQuote", "Prog"],
+      ["OrderedListElem", "Prog"],
+      ["UnorderedListElem", "Prog"],
       ["Text", "Prog"],
     ],
     callback: () => {},
