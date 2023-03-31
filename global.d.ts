@@ -18,7 +18,7 @@ type GrammarPattern = string[];
 type GrammarRule = {
   name: string;
   pattern: GrammarPattern[]; // TODO: Should really be using an abstraction here to be more clear
-  callback: (t: Tokens) => GrammarOuput;
+  callback: (args: any) => GrammarOuput;
 };
 
 type RuleMatch = {
