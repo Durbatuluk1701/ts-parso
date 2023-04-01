@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const Parser_1 = require("./Parser");
-const Tokenizer_1 = require("./Tokenizer");
-exports.Tokenize = Tokenizer_1.Tokenize;
-exports.Parser = Parser_1.Parser;
+exports.Tokenize = exports.Parser = void 0;
+var Parser_1 = require("./Parser");
+Object.defineProperty(exports, "Parser", { enumerable: true, get: function () { return Parser_1.Parser; } });
+var Tokenizer_1 = require("./Tokenizer");
+Object.defineProperty(exports, "Tokenize", { enumerable: true, get: function () { return Tokenizer_1.Tokenize; } });
 //# sourceMappingURL=index.js.map

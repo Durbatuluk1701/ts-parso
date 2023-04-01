@@ -2,7 +2,7 @@
  * Gets the name of all rules in a grammar
  * @param g the grammar to get the rules names from
  */
-const rule_names = (g: Grammar): string[] => {
+const rule_names = <T>(g: Grammar<T>): string[] => {
   return g.map((rule) => rule.name);
 };
 
@@ -13,7 +13,7 @@ const rule_names = (g: Grammar): string[] => {
  * @param r the name of the rule to find
  * @throws If the rule name r is not in grammar g
  */
-const get_rule = (g: Grammar, r: string): GrammarRule => {
+const get_rule = <T>(g: Grammar<T>, r: string): GrammarRule<T> => {
   const gr = g.find((val) => val.name === r);
   if (gr) {
     return gr;
@@ -30,14 +30,14 @@ const get_rule = (g: Grammar, r: string): GrammarRule => {
  * @param p the specific pattern to attempt to parse
  * @param final whether or not this parser should consume all remaining tokens
  */
-const LL_pattern = (
+const LL_pattern = <T>(
   k: number,
   ts: Tokens,
-  g: Grammar,
-  r: GrammarRule,
+  g: Grammar<T>,
+  r: GrammarRule<T>,
   p: GrammarPattern,
   final: boolean
-): [RuleMatch, number] => {
+): [RuleMatch<T>, number] => {
   /** We are attempting to force match pattern "p" with tokens "ts"
       We have to match "k" tokens, and then if they all match, 
       consume the rest of the pattern.
@@ -51,9 +51,8 @@ const LL_pattern = (
   */
 
   const ruleNames = rule_names(g);
-  const running_rule: RuleMatch = {
+  const running_rule: RuleMatch<T> = {
     rule: r,
-    name: `${r.name} - Pattern: ${p}`,
     match: [],
   };
 
@@ -68,7 +67,7 @@ const LL_pattern = (
     }
     if (tokI.name === patternI) {
       // This match at point 'i'
-      running_rule.match.push(tokI);
+      running_rule.match.push({ rule: tokI, match: [] });
       tokenInd++;
     } else if (ruleNames.includes(patternI)) {
       // pattern[i] is a separate rule, recurse down to match - FIRST CASE
@@ -106,7 +105,7 @@ const LL_pattern = (
     }
     if (tokI.name === patternI) {
       // This match at point 'i'
-      running_rule.match.push(tokI);
+      running_rule.match.push({ rule: tokI, match: [] });
       tokenInd++;
     } else if (ruleNames.includes(patternI)) {
       // pattern[i] is a separate rule, recurse down to match
@@ -142,13 +141,13 @@ const LL_pattern = (
  * @param r the top-level grammar rule to attempt to parse
  * @param final whether or not this parser should consume all remaining tokens
  */
-const LL_rule = (
+const LL_rule = <T>(
   k: number,
   ts: Tokens,
-  g: Grammar,
-  r: GrammarRule,
+  g: Grammar<T>,
+  r: GrammarRule<T>,
   final: boolean
-): [RuleMatch, number] => {
+): [RuleMatch<T>, number] => {
   const running_errors: any[] = [];
   // While we still have tokens to consume, try the rules patterns
   for (const pattern of r.pattern) {
@@ -181,12 +180,12 @@ const LL_rule = (
  * @param langGrammar the grammar to use for parsing
  * @param topLevelRule the top-level rule that the token stream must conform to
  */
-export const Parser = (
+export const Parser = <T>(
   k: number,
   tokStream: Tokens,
-  langGrammar: Grammar,
-  topLevelRule: GrammarRule
-): RuleMatch => {
+  langGrammar: Grammar<T>,
+  topLevelRule: GrammarRule<T>
+): RuleMatch<T> => {
   const rm = LL_rule(k, tokStream, langGrammar, topLevelRule, true)[0];
   return rm;
 };

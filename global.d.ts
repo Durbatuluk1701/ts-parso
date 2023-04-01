@@ -1,4 +1,5 @@
 type Token = {
+  type: "Token";
   name: string;
   match: string;
 };
@@ -11,20 +12,20 @@ interface TokenDescription {
   precedence: number;
 }
 
-type GrammarOuput = any;
+// type GrammarOuput = any;
 
 type GrammarPattern = string[];
 
-type GrammarRule = {
+type GrammarRule<T> = {
+  type: "Rule";
   name: string;
   pattern: GrammarPattern[]; // TODO: Should really be using an abstraction here to be more clear
-  callback: (args: any) => GrammarOuput;
+  callback: (r: RuleMatch) => T;
 };
 
-type RuleMatch = {
-  rule: GrammarRule;
-  name: string;
-  match: (RuleMatch | Token)[];
+type RuleMatch<T> = {
+  rule: GrammarRule<T> | Token;
+  match: RuleMatch<T>[];
 };
 
-type Grammar = GrammarRule[];
+type Grammar<T> = GrammarRule<T>[];

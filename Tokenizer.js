@@ -27,6 +27,7 @@ const Tokenize_prime = (str, tds) => {
     const optimalMatch = goodMatches[0];
     if (optimalMatch && optimalMatch.match) {
         const best_token = {
+            type: "Token",
             name: optimalMatch.name,
             match: optimalMatch.match[0],
         };

@@ -46,7 +46,6 @@ const LL_pattern = (k, ts, g, r, p, final) => {
     const ruleNames = rule_names(g);
     const running_rule = {
         rule: r,
-        name: `${r.name} - Pattern: ${p}`,
         match: [],
     };
     // Checking the first "k" tokens
@@ -60,7 +59,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
         }
         if (tokI.name === patternI) {
             // This match at point 'i'
-            running_rule.match.push(tokI);
+            running_rule.match.push({ rule: tokI, match: [] });
             tokenInd++;
         }
         else if (ruleNames.includes(patternI)) {
@@ -90,7 +89,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
         }
         if (tokI.name === patternI) {
             // This match at point 'i'
-            running_rule.match.push(tokI);
+            running_rule.match.push({ rule: tokI, match: [] });
             tokenInd++;
         }
         else if (ruleNames.includes(patternI)) {
