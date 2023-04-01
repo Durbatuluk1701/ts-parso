@@ -51,7 +51,7 @@ const LL_pattern = (k, ts, g, r, p, final) => {
     // Checking the first "k" tokens
     let patternInd = 0;
     let tokenInd = 0;
-    for (; tokenInd < k && patternInd < p.length; patternInd++) {
+    for (; tokenInd < k && tokenInd < ts.length && patternInd < p.length; patternInd++) {
         const tokI = ts[tokenInd];
         const patternI = p[patternInd];
         if (patternI === "EMPTY") {
