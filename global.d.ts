@@ -20,7 +20,7 @@ type GrammarRule<T> = {
   type: "Rule";
   name: string;
   pattern: GrammarPattern[]; // TODO: Should really be using an abstraction here to be more clear
-  callback: (r: RuleMatch) => T;
+  callback: (r: RuleMatch<T>, context?: any) => T;
 };
 
 type RuleMatch<T> = {
