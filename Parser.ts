@@ -37,7 +37,7 @@ const LL_pattern = <T>(
   r: GrammarRule<T>,
   p: GrammarPattern,
   final: boolean
-): [RuleMatch<T>, number] => {
+): [RuleMatch<T>, number] | undefined => {
   /** We are attempting to force match pattern "p" with tokens "ts"
       We have to match "k" tokens, and then if they all match, 
       consume the rest of the pattern.
@@ -61,7 +61,7 @@ const LL_pattern = <T>(
   let tokenInd = 0;
   for (
     ;
-    tokenInd < k && tokenInd < ts.length && patternInd < p.length;
+    tokenInd < k && patternInd < p.length && tokenInd < ts.length;
     patternInd++
   ) {
     const tokI = ts[tokenInd];
@@ -80,20 +80,31 @@ const LL_pattern = <T>(
       const consumeAll = final && patternInd === p.length - 1;
       const patRule = get_rule(g, patternI);
 
-      const [matched, matchedInd] = LL_rule(
-        k - tokenInd,
+      const matchedRule = LL_rule(
+        k,
         ts.slice(tokenInd),
         g,
         patRule,
         consumeAll
       );
-      // Add the matches
-      running_rule.match.push(matched);
-      // add to i the length of the match
-      // TODO: Check spec?
-      tokenInd += matchedInd;
+
+      if (matchedRule) {
+        // We did not have an undefined traversal.
+        // Add the matches
+        running_rule.match.push(matchedRule[0]);
+        // add to i the length of the match
+        // TODO: Check spec?
+        tokenInd += matchedRule[1];
+      } else {
+        // Matched rule was undefined, and this is the first "k"
+        // tokens, so we have to bail out
+        return undefined;
+      }
     } else {
-      throw new Error("No matching pattern in LL_pattern");
+      // So we didn't consume "k" tokens and failed,
+      // so this is not a true error, just a bail out
+      // throw new Error("WRONG_PATTERN");
+      return undefined;
     }
   }
 
@@ -117,19 +128,26 @@ const LL_pattern = <T>(
       const consumeAll = final && patternInd === p.length - 1;
       const patRule = get_rule(g, patternI);
 
-      const [matched, matchedInd] = LL_rule(
+      const matchedRule = LL_rule(
         k,
         ts.slice(tokenInd),
         g,
         patRule,
         consumeAll
       );
-      // Add the matches
-      running_rule.match.push(matched);
 
-      tokenInd += matchedInd;
+      if (matchedRule) {
+        // Add the matches
+        running_rule.match.push(matchedRule[0]);
+
+        tokenInd += matchedRule[1];
+      } else {
+        // We had an undefined return, but we already went forward "k"
+        // tokens, so must be an error
+        throw new Error("We made it 'k' tokens, but it failed afterwards");
+      }
     } else {
-      throw new Error("No matching pattern in LL_pattern");
+      throw new Error("We made it 'k' tokens, but it failed afterwards");
     }
   }
 
@@ -151,14 +169,14 @@ const LL_rule = <T>(
   g: Grammar<T>,
   r: GrammarRule<T>,
   final: boolean
-): [RuleMatch<T>, number] => {
-  const running_errors: any[] = [];
+): [RuleMatch<T>, number] | undefined => {
   // While we still have tokens to consume, try the rules patterns
   for (const pattern of r.pattern) {
     // For each possible pattern
-    try {
-      // Try to apply that pattern,
-      const [patternTry, ind] = LL_pattern(k, ts, g, r, pattern, final);
+    // Try to apply that pattern,
+    const patternReturn = LL_pattern(k, ts, g, r, pattern, final);
+    if (patternReturn) {
+      const [patternTry, ind] = patternReturn;
       // If we have validly reached this point,
       // the entire pattern has been consumed!
 
@@ -168,11 +186,12 @@ const LL_rule = <T>(
         // This cannot be the pattern, so continue
       }
       return [patternTry, ind];
-    } catch (e) {
-      running_errors.push(e);
     }
   }
-  throw new Error(`Rule did not match: ${running_errors}`);
+  if (final) {
+    throw new Error("All patterns exhausted, and none validly parsed");
+  }
+  return undefined;
 };
 
 /**
@@ -190,6 +209,9 @@ export const Parser = <T>(
   langGrammar: Grammar<T>,
   topLevelRule: GrammarRule<T>
 ): RuleMatch<T> => {
-  const rm = LL_rule(k, tokStream, langGrammar, topLevelRule, true)[0];
-  return rm;
+  const ruleOut = LL_rule(k, tokStream, langGrammar, topLevelRule, true);
+  if (ruleOut) {
+    return ruleOut[0];
+  }
+  throw new Error("Failed to parser!");
 };
