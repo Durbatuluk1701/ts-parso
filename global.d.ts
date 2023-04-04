@@ -24,8 +24,25 @@ type GrammarRule<T> = {
 };
 
 type RuleMatch<T> = {
-  rule: GrammarRule<T> | Token;
-  match: RuleMatch<T>[];
+  type: "Rule";
+  name: string;
+  callback: (context?: any) => T;
+  match: Match<T>[];
 };
+
+type TokenMatch<T> = {
+  type: "Token";
+  name: string;
+  match: string;
+};
+
+type Match<T> = RuleMatch<T> | TokenMatch<T>;
+// {
+//   // rule: GrammarRule<T> | Token;
+//   type: "Rule" | "Token";
+//   name: string;
+//   callback: (context?: any) => T;
+//   match: RuleMatch<T>[] | string;
+// };
 
 type Grammar<T> = GrammarRule<T>[];

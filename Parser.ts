@@ -37,7 +37,7 @@ const LL_pattern = <T>(
   r: GrammarRule<T>,
   p: GrammarPattern,
   final: boolean
-): [RuleMatch<T>, number] | undefined => {
+): [Match<T>, number] | undefined => {
   /** We are attempting to force match pattern "p" with tokens "ts"
       We have to match "k" tokens, and then if they all match, 
       consume the rest of the pattern.
@@ -52,75 +52,38 @@ const LL_pattern = <T>(
 
   const ruleNames = rule_names(g);
   const running_rule: RuleMatch<T> = {
-    rule: r,
+    type: "Rule",
+    name: r.name,
+    callback: (context?: any) => r.callback(running_rule, context),
     match: [],
   };
 
   // Checking the first "k" tokens
-  let patternInd = 0;
   let tokenInd = 0;
   for (
-    ;
-    tokenInd < k && patternInd < p.length && tokenInd < ts.length;
+    let patternInd = 0;
+    patternInd < p.length && tokenInd < ts.length;
     patternInd++
   ) {
     const tokI = ts[tokenInd];
     const patternI = p[patternInd];
     if (patternI === "EMPTY") {
+      const emptyMatch: TokenMatch<T> = {
+        type: "Token",
+        name: "EMPTY",
+        match: "",
+      };
+      running_rule.match.push(emptyMatch);
       return [running_rule, 0];
     }
     if (tokI.name === patternI) {
       // This match at point 'i'
-      running_rule.match.push({ rule: tokI, match: [] });
-      tokenInd++;
-    } else if (ruleNames.includes(patternI)) {
-      // pattern[i] is a separate rule, recurse down to match - FIRST CASE
-
-      // If our pattern is the last in the list, it should consume all
-      const consumeAll = final && patternInd === p.length - 1;
-      const patRule = get_rule(g, patternI);
-
-      const matchedRule = LL_rule(
-        k,
-        ts.slice(tokenInd),
-        g,
-        patRule,
-        consumeAll
-      );
-
-      if (matchedRule) {
-        // We did not have an undefined traversal.
-        // Add the matches
-        running_rule.match.push(matchedRule[0]);
-        // add to i the length of the match
-        // TODO: Check spec?
-        tokenInd += matchedRule[1];
-      } else {
-        // Matched rule was undefined, and this is the first "k"
-        // tokens, so we have to bail out
-        return undefined;
-      }
-    } else {
-      // So we didn't consume "k" tokens and failed,
-      // so this is not a true error, just a bail out
-      // throw new Error("WRONG_PATTERN");
-      return undefined;
-    }
-  }
-
-  // After this point, we have satisfied our
-  // "k" token lookahead, parse the rest of the pattern and continue
-
-  // Checking the first "k" tokens
-  for (; patternInd < p.length && tokenInd < ts.length; patternInd++) {
-    const tokI = ts[tokenInd];
-    const patternI = p[patternInd];
-    if (patternI === "EMPTY") {
-      return [running_rule, 0];
-    }
-    if (tokI.name === patternI) {
-      // This match at point 'i'
-      running_rule.match.push({ rule: tokI, match: [] });
+      const tokenMatch: TokenMatch<T> = {
+        type: "Token",
+        name: tokI.name,
+        match: tokI.match,
+      };
+      running_rule.match.push(tokenMatch);
       tokenInd++;
     } else if (ruleNames.includes(patternI)) {
       // pattern[i] is a separate rule, recurse down to match
@@ -137,20 +100,29 @@ const LL_pattern = <T>(
       );
 
       if (matchedRule) {
+        // We did not have an undefined traversal.
         // Add the matches
         running_rule.match.push(matchedRule[0]);
-
         tokenInd += matchedRule[1];
       } else {
-        // We had an undefined return, but we already went forward "k"
-        // tokens, so must be an error
-        throw new Error("We made it 'k' tokens, but it failed afterwards");
+        if (tokenInd < k) {
+          // Matched rule was undefined, and this is the first "k"
+          // tokens, so we have to bail out
+          return undefined;
+        } else {
+          throw new Error("We made it 'k' tokens, but it failed afterwards");
+        }
       }
     } else {
-      throw new Error("We made it 'k' tokens, but it failed afterwards");
+      if (tokenInd < k) {
+        // So we didn't consume "k" tokens and failed,
+        // so this is not a true error, just a bail out
+        return undefined;
+      } else {
+        throw new Error("We made it 'k' tokens, but it failed afterwards");
+      }
     }
   }
-
   // We have consumed all the way we need to
   return [running_rule, tokenInd];
 };
@@ -169,7 +141,7 @@ const LL_rule = <T>(
   g: Grammar<T>,
   r: GrammarRule<T>,
   final: boolean
-): [RuleMatch<T>, number] | undefined => {
+): [Match<T>, number] | undefined => {
   // While we still have tokens to consume, try the rules patterns
   for (const pattern of r.pattern) {
     // For each possible pattern
@@ -208,7 +180,7 @@ export const Parser = <T>(
   tokStream: Tokens,
   langGrammar: Grammar<T>,
   topLevelRule: GrammarRule<T>
-): RuleMatch<T> => {
+): Match<T> => {
   const ruleOut = LL_rule(k, tokStream, langGrammar, topLevelRule, true);
   if (ruleOut) {
     return ruleOut[0];
